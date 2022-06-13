@@ -2,7 +2,7 @@ library(gRain)
 library(prodlim)
 set.seed(0)
 
-load('binarized.Rds')
+load('binarized_data.Rds')
 age.cutoff <- mean(aggregate(df$Age,list(df$class),mean)$x)
 df$Age <- as.numeric(df$Age > age.cutoff)
 col_names <- names(df)
