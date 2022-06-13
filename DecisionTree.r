@@ -206,8 +206,8 @@ DecisionTree <- function(X, Y) {
     
     # if we can split this node further
     if (Can_Split(x, y)){
-      print("-------------------------------")
-      print("Creating new node")
+      # print("-------------------------------")
+      # print("Creating new node")
       
       # find where to split the data
       split = Best_Split(x, y)
@@ -239,8 +239,8 @@ DecisionTree <- function(X, Y) {
     
     # else create the leaf node
     else {
-      print("===============================")
-      print("Creating new leaf")
+      # print("===============================")
+      # print("Creating new leaf")
       root$isLeaf <- TRUE
       root$label  <- Classify(y)
       print(root$label)
@@ -331,9 +331,21 @@ data = get_dataset()
 X = data[1:ncol(data)-1]
 Y = data["Class"]
 
+# split sets
+size = nrow(X)
+mid  = as.integer(size*.75)
+train = 1:mid
+test = (mid+1):size
+
+X_train = X[train,,drop=F]
+Y_train = Y[train,,drop=F]
+
+X_test = X[test,,drop=F]
+Y_test = Y[test,,drop=F]
+
 # fit tree
-tree = DecisionTree(X, Y)
+tree = DecisionTree(X_train, Y_train)
 
 # get amount correct
-Get_Accuracy(tree, X, Y[,1])
+Get_Accuracy(tree, X_test, Y_test[,1])
 
