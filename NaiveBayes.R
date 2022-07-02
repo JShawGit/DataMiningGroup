@@ -56,8 +56,8 @@ predict <- function(tuple){
     #print(paste0("OJP:",one.joint.prob))
   }
   
-  #round(one.joint.prob/(one.joint.prob+zero.joint.prob))
-  one.joint.prob/(one.joint.prob+zero.joint.prob)
+  round(one.joint.prob/(one.joint.prob+zero.joint.prob))
+  #one.joint.prob/(one.joint.prob+zero.joint.prob)
 }
 
 #predict(df[5,])

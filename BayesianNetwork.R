@@ -1,34 +1,112 @@
-library(prodlim)
-set.seed(0)
+# library(prodlim)
+# library(data.table)
+#set.seed(0)
 
 load('binarized_data.Rds')
 age.cutoff <- mean(aggregate(df$Age,list(df$class),mean)$x)
 df$Age <- as.numeric(df$Age > age.cutoff)
 col_names <- names(df)
 df[,col_names] <- lapply(df[,col_names] , factor)
-library(gRain)
-dependencies <- ~Age + Gender + class*Age*Gender +
-  Genital.thrush*Gender*class +
-  Polyuria*class +
-  Polydipsia*class +
-  sudden.weight.loss*Polyuria*class +
-  weakness*class +
-  Polyphagia*class +
-  visual.blurring*class +
-  Itching*class +
-  Irritability*class +
-  delayed.healing*weakness*Itching*class + #*Polyphagia +
-  partial.paresis*class +
-  muscle.stiffness*Age*visual.blurring*class +
-  Alopecia*Gender*delayed.healing*class +
-  Obesity*sudden.weight.loss*class
+# library(gRain)
+# dependencies <- ~Age + Gender + class*Age*Gender +
+#   Genital.thrush*Gender*class +
+#   Polyuria*class +
+#   Polydipsia*class +
+#   sudden.weight.loss*Polyuria*class +
+#   weakness*class +
+#   Polyphagia*class +
+#   visual.blurring*class +
+#   Itching*class +
+#   Irritability*class +
+#   delayed.healing*weakness*Itching*class + #*Polyphagia +
+#   partial.paresis*class +
+#   muscle.stiffness*Age*visual.blurring*class +
+#   Alopecia*Gender*delayed.healing*class +
+#   Obesity*sudden.weight.loss*class
 
-graph <- dag(dependencies)
-cond.prob.tabs <- extractCPT(df, graph,smooth = 1)
-
-for(i in 1:length(cond.prob.tabs)){
-  cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
+gen.tabs <- function(dat,smooth=1){
+  result <- NULL
+  result$Age <- CJ(0:1)[,1]
+  colnames(result$Age) <- c("Age")
+  result$Age[,Freq := mapply((function (Age) (sum(dat$Age==Age)+smooth)/(dim(dat)[1]+smooth*dim(result$Age)[1])),Age)]
+  
+  result$Gender <- CJ(0:1)[,1]
+  colnames(result$Gender) <- c("Gender")
+  result$Gender[,Freq := mapply((function (Gender) (sum(dat$Gender==Gender)+smooth)/(dim(dat)[1]+smooth*dim(result$Gender)[1])),Gender)]
+  
+  result$class <- CJ(0:1,0:1,0:1)[,3:1]
+  colnames(result$class) <- c("class","Age","Gender")
+  result$class[,Freq := mapply((function (p1,p2,p3) (sum(dat$class==p1 & dat$Age==p2 & dat$Gender==p3)+smooth)/(sum(dat$Age==p2 & dat$Gender==p3)+smooth*2)),class,Age,Gender)]
+  
+  result$Genital.thrush <- CJ(0:1,0:1,0:1)[,3:1]
+  colnames(result$Genital.thrush) <- c("Genital.thrush","Gender","class")
+  result$Genital.thrush[,Freq := mapply((function (p1,p2,p3) (sum(dat$Genital.thrush==p1 & dat$Gender==p2 & dat$class==p3)+smooth)/(sum(dat$Gender==p2 & dat$class==p3)+smooth*2)),Genital.thrush,Gender,class)]
+  
+  result$Polyuria <- CJ(0:1,0:1)[,2:1]
+  colnames(result$Polyuria) <- c("Polyuria","class")
+  result$Polyuria[,Freq := mapply((function (p1,p2) (sum(dat$Polyuria==p1 & dat$class==p2)+smooth)/(sum(dat$class==p2)+smooth*2)),Polyuria,class)]
+  
+  result$Polydipsia <- CJ(0:1,0:1)[,2:1]
+  colnames(result$Polydipsia) <- c("Polydipsia","class")
+  result$Polydipsia[,Freq := mapply((function (p1,p2) (sum(dat$Polydipsia==p1 & dat$class==p2)+smooth)/(sum(dat$class==p2)+smooth*2)),Polydipsia,class)]
+  
+  result$sudden.weight.loss <- CJ(0:1,0:1,0:1)[,3:1]
+  colnames(result$sudden.weight.loss) <- c("sudden.weight.loss","class","Polyuria")
+  result$sudden.weight.loss[,Freq := mapply((function (p1,p2,p3) (sum(dat$sudden.weight.loss==p1 & dat$class==p2 & dat$Polyuria==p3)+smooth)/(sum(dat$class==p2 & dat$Polyuria==p3)+smooth*2)),sudden.weight.loss,class,Polyuria)]
+  
+  result$weakness <- CJ(0:1,0:1)[,2:1]
+  colnames(result$weakness) <- c("weakness","class")
+  result$weakness[,Freq := mapply((function (p1,p2) (sum(dat$weakness==p1 & dat$class==p2)+smooth)/(sum(dat$class==p2)+smooth*2)),weakness,class)]
+  
+  result$Polyphagia <- CJ(0:1,0:1)[,2:1]
+  colnames(result$Polyphagia) <- c("Polyphagia","class")
+  result$Polyphagia[,Freq := mapply((function (p1,p2) (sum(dat$Polyphagia==p1 & dat$class==p2)+smooth)/(sum(dat$class==p2)+smooth*2)),Polyphagia,class)]
+  
+  result$visual.blurring <- CJ(0:1,0:1)[,2:1]
+  colnames(result$visual.blurring) <- c("visual.blurring","class")
+  result$visual.blurring[,Freq := mapply((function (p1,p2) (sum(dat$visual.blurring==p1 & dat$class==p2)+smooth)/(sum(dat$class==p2)+smooth*2)),visual.blurring,class)]
+  
+  result$Itching <- CJ(0:1,0:1)[,2:1]
+  colnames(result$Itching) <- c("Itching","class")
+  result$Itching[,Freq := mapply((function (p1,p2) (sum(dat$Itching==p1 & dat$class==p2)+smooth)/(sum(dat$class==p2)+smooth*2)),Itching,class)]
+  
+  result$Irritability <- CJ(0:1,0:1)[,2:1]
+  colnames(result$Irritability) <- c("Irritability","class")
+  result$Irritability[,Freq := mapply((function (p1,p2) (sum(dat$Irritability==p1 & dat$class==p2)+smooth)/(sum(dat$class==p2)+smooth*2)),Irritability,class)]
+  
+  result$delayed.healing <- CJ(0:1,0:1,0:1,0:1)[,4:1]
+  colnames(result$delayed.healing) <- c("delayed.healing","class","weakness","Itching")
+  result$delayed.healing[,Freq := mapply((function (p1,p2,p3,p4) (sum(dat$delayed.healing==p1 & dat$class==p2 & dat$weakness==p3 & dat$Itching==p4)+smooth)/(sum(dat$class==p2 & dat$weakness==p3 & dat$Itching==p4)+smooth*2)),delayed.healing,class,weakness,Itching)]
+  
+  result$partial.paresis <- CJ(0:1,0:1)[,2:1]
+  colnames(result$partial.paresis) <- c("partial.paresis","class")
+  result$partial.paresis[,Freq := mapply((function (p1,p2) (sum(dat$partial.paresis==p1 & dat$class==p2)+smooth)/(sum(dat$class==p2)+smooth*2)),partial.paresis,class)]
+  
+  result$muscle.stiffness <- CJ(0:1,0:1,0:1,0:1)[,4:1]
+  colnames(result$muscle.stiffness) <- c("muscle.stiffness","Age","class","visual.blurring")
+  result$muscle.stiffness[,Freq := mapply((function (p1,p2,p3,p4) (sum(dat$muscle.stiffness==p1 & dat$Age==p2 & dat$class==p3 & dat$visual.blurring==p4)+smooth)/(sum(dat$Age==p2 & dat$class==p3 & dat$visual.blurring==p4)+smooth*2)),muscle.stiffness,Age,class,visual.blurring)]
+  
+  result$Alopecia <- CJ(0:1,0:1,0:1,0:1)[,4:1]
+  colnames(result$Alopecia) <- c("Alopecia","Gender","class","delayed.healing")
+  result$Alopecia[,Freq := mapply((function (p1,p2,p3,p4) (sum(dat$Alopecia==p1 & dat$Gender==p2 & dat$class==p3 & dat$delayed.healing==p4)+smooth)/(sum(dat$Gender==p2 & dat$class==p3 & dat$delayed.healing==p4)+smooth*2)),Alopecia,Gender,class,delayed.healing)]
+  
+  result$Obesity <- CJ(0:1,0:1,0:1)[,3:1]
+  colnames(result$Obesity) <- c("Obesity","class","sudden.weight.loss")
+  result$Obesity[,Freq := mapply((function (p1,p2,p3) (sum(dat$Obesity==p1 & dat$class==p2 & dat$sudden.weight.loss==p3)+smooth)/(sum(dat$class==p2 & dat$sudden.weight.loss==p3)+smooth*2)),Obesity,class,sudden.weight.loss)]
+  
+  for(i in 1:length(result)){
+    result[[i]] <- as.data.frame(result[[i]])
+  }
+  
+  result
 }
+
+# graph <- dag(dependencies)
+# cond.prob.tabs <- extractCPT(df, graph,smooth = 1)
+# 
+# for(i in 1:length(cond.prob.tabs)){
+#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
+# }
 
 # for(i in 3:length(cond.prob.tabs)){
 #   cond.prob.tabs[[i]] <- as.data.frame(ftable(cond.prob.tabs[[i]],row.vars = 1:length(dimnames(cond.prob.tabs[[i]]))))
@@ -55,8 +133,8 @@ predict <- function(tuple){
     #print(paste0("OJP:",one.joint.prob))
   }
   
-  #round(one.joint.prob/(one.joint.prob+zero.joint.prob))
-  one.joint.prob/(one.joint.prob+zero.joint.prob)
+  round(one.joint.prob/(one.joint.prob+zero.joint.prob))
+  #one.joint.prob/(one.joint.prob+zero.joint.prob)
 }
 
 #predict(df[5,])
@@ -70,26 +148,30 @@ fold1 <- df[1:173,]
 fold2 <- df[174:(174+173),]
 fold3 <- df[(174+173):520,]
 
-cond.prob.tabs <- extractCPT(rbind(fold2,fold3), graph, smooth = 1)
-for(i in 1:length(cond.prob.tabs)){
-  cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
-}
+# cond.prob.tabs <- extractCPT(rbind(fold2,fold3), graph, smooth = 1)
+# for(i in 1:length(cond.prob.tabs)){
+#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
+# }
+cond.prob.tabs <- gen.tabs(rbind(fold2,fold3))
+# for(i in 1:length(cond.prob.tabs)){
+#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
+# }
 for(i in 1:173){
   results[i] <- predict(fold1[i,])
 }
 
-cond.prob.tabs <- extractCPT(rbind(fold1,fold3), graph, smooth = 1)
-for(i in 1:length(cond.prob.tabs)){
-  cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
-}
+cond.prob.tabs <- gen.tabs(rbind(fold1,fold3))
+# for(i in 1:length(cond.prob.tabs)){
+#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
+# }
 for(i in 1:173){
   results[i+173] <- predict(fold2[i,])
 }
 
-cond.prob.tabs <- extractCPT(rbind(fold1,fold2), graph, smooth = 1)
-for(i in 1:length(cond.prob.tabs)){
-  cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
-}
+cond.prob.tabs <- gen.tabs(rbind(fold1,fold2))
+# for(i in 1:length(cond.prob.tabs)){
+#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
+# }
 for(i in 1:174){
   results[i+173+173] <- predict(fold3[i,])
 }
@@ -97,5 +179,3 @@ for(i in 1:174){
 
 print("Accuracy:")
 (520-sum(abs(results - (as.numeric(df$class)-1))))/520
-
-
