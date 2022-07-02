@@ -1,0 +1,42 @@
+$cm
+Confusion Matrix and Statistics
+
+          Reference
+Prediction   0   1
+         0 179  50
+         1  21 270
+                                          
+               Accuracy : 0.8635          
+                 95% CI : (0.8309, 0.8918)
+    No Information Rate : 0.6154          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.7192          
+                                          
+ Mcnemar's Test P-Value : 0.0008906       
+                                          
+            Sensitivity : 0.8950          
+            Specificity : 0.8438          
+         Pos Pred Value : 0.7817          
+         Neg Pred Value : 0.9278          
+             Prevalence : 0.3846          
+         Detection Rate : 0.3442          
+   Detection Prevalence : 0.4404          
+      Balanced Accuracy : 0.8694          
+                                          
+       'Positive' Class : 0               
+                                          
+
+$roc
+A performance instance
+  'False positive rate' vs. 'True positive rate' (alpha: 'Cutoff')
+  with 343 data points
+$AUROC
+[1] 0.9451094
+
+$pr
+A performance instance
+  'Recall' vs. 'Precision' (alpha: 'Cutoff')
+  with 343 data points
+$AUPRC
+[1] 0.9722325
