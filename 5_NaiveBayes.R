@@ -1,35 +1,24 @@
-# library(prodlim)
-# library(data.table)
-#set.seed(0)
-
+library(data.table)
+library(prodlim)
+#The dataset has already been preprocessed to convert the binary string factors to numeric factors
 load('binarized_data.Rds')
+#Convert the age attribute to a binary factor
 age.cutoff <- mean(aggregate(df$Age,list(df$class),mean)$x)
 df$Age <- as.numeric(df$Age > age.cutoff)
 col_names <- names(df)
+#Convert every column to a factor
 df[,col_names] <- lapply(df[,col_names] , factor)
-# library(gRain)
-# dependencies <- ~Age + Gender + class*Age*Gender +
-#   Genital.thrush*Gender*class +
-#   Polyuria*class +
-#   Polydipsia*class +
-#   sudden.weight.loss*Polyuria*class +
-#   weakness*class +
-#   Polyphagia*class +
-#   visual.blurring*class +
-#   Itching*class +
-#   Irritability*class +
-#   delayed.healing*weakness*Itching*class + #*Polyphagia +
-#   partial.paresis*class +
-#   muscle.stiffness*Age*visual.blurring*class +
-#   Alopecia*Gender*delayed.healing*class +
-#   Obesity*sudden.weight.loss*class
 
+#Generate conditional probability tables for a particular network model, data, and smoothing factor
 gen.tabs <- function(dat,smooth=1){
   result <- NULL
+  
+  #The attribute class has no parents in the network, and is the parent of every other attribute
   result$class <- CJ(0:1)[,1]
   colnames(result$class) <- c("class")
   result$class[,Freq := mapply((function (class) (sum(dat$class==class)+smooth)/(dim(dat)[1]+smooth*dim(result$class)[1])),class)]
   
+  #Every following attribute has class as its only parent and no children
   result$Age <- CJ(0:1,0:1)[,2:1]
   colnames(result$Age) <- c("Age","class")
   result$Age[,Freq := mapply((function (p1,p2) (sum(dat$Age==p1 & dat$class==p2)+smooth)/(sum(dat$Age==p2)+smooth*2)),Age,class)]
@@ -101,28 +90,22 @@ gen.tabs <- function(dat,smooth=1){
   result
 }
 
-# graph <- dag(dependencies)
-# cond.prob.tabs <- extractCPT(df, graph,smooth = 1)
-# 
-# for(i in 1:length(cond.prob.tabs)){
-#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
-# }
-
-# for(i in 3:length(cond.prob.tabs)){
-#   cond.prob.tabs[[i]] <- as.data.frame(ftable(cond.prob.tabs[[i]],row.vars = 1:length(dimnames(cond.prob.tabs[[i]]))))
-# }
-#subset(cond.prob.tabs$delayed.healing, (delayed.healing == 0 & class == 1 & weakness == 0 & Itching == 1 & Age == 1))$Freq
+#Use the conditional probability tables to predict the probability of diabetes for a single tuple
 predict <- function(tuple){
+  #Find the join probability for no diabetes
   tuple$class <- 0
   zero.joint.prob <- 1
   for(colname in colnames(df)){
+    #Find the columns in the corresponding CPT
     tab.names <- colnames(cond.prob.tabs[[colname]])[1:length(colnames(cond.prob.tabs[[colname]]))-1]
+    #Get the values of those columns in the tuple
     filtered.tup <- tuple[,tab.names]
+    #Lookup the corresponding row in the CPT
     cond.prob <- cond.prob.tabs[[colname]][row.match(filtered.tup, cond.prob.tabs[[colname]][1:ncol(cond.prob.tabs[[colname]])-1]),ncol(cond.prob.tabs[[colname]])]
     zero.joint.prob <- zero.joint.prob * cond.prob
-    #print(paste0("ZJP:",zero.joint.prob))
   }
   
+  #Find the joint probability for diabetes
   tuple$class <- 1
   one.joint.prob <- 1
   for(colname in colnames(df)){
@@ -130,48 +113,32 @@ predict <- function(tuple){
     filtered.tup <- tuple[,tab.names]
     cond.prob <- cond.prob.tabs[[colname]][row.match(filtered.tup, cond.prob.tabs[[colname]][1:ncol(cond.prob.tabs[[colname]])-1]),ncol(cond.prob.tabs[[colname]])]
     one.joint.prob <- one.joint.prob * cond.prob
-    #print(paste0("OJP:",one.joint.prob))
   }
   
+  #Round for discrete results or not for probabilistic results
   round(one.joint.prob/(one.joint.prob+zero.joint.prob))
   #one.joint.prob/(one.joint.prob+zero.joint.prob)
 }
 
-#predict(df[5,])
-
 results <- integer(520)
-# for(i in 1:520){
-#   results[i] <- predict(df[i,])
-# }
 
+#Separate the folds for cross-validation
 fold1 <- df[1:173,]
 fold2 <- df[174:(174+173),]
 fold3 <- df[(174+173):520,]
 
-# cond.prob.tabs <- extractCPT(rbind(fold2,fold3), graph, smooth = 1)
-# for(i in 1:length(cond.prob.tabs)){
-#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
-# }
+#Generate the conditional probability tables and predict the test cases for each fold
 cond.prob.tabs <- gen.tabs(rbind(fold2,fold3))
-# for(i in 1:length(cond.prob.tabs)){
-#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
-# }
 for(i in 1:173){
   results[i] <- predict(fold1[i,])
 }
 
 cond.prob.tabs <- gen.tabs(rbind(fold1,fold3))
-# for(i in 1:length(cond.prob.tabs)){
-#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
-# }
 for(i in 1:173){
   results[i+173] <- predict(fold2[i,])
 }
 
 cond.prob.tabs <- gen.tabs(rbind(fold1,fold2))
-# for(i in 1:length(cond.prob.tabs)){
-#   cond.prob.tabs[[i]] <- as.data.frame(cond.prob.tabs[[i]])
-# }
 for(i in 1:174){
   results[i+173+173] <- predict(fold3[i,])
 }
@@ -179,3 +146,4 @@ for(i in 1:174){
 
 print("Accuracy:")
 (520-sum(abs(results - (as.numeric(df$class)-1))))/520
+
