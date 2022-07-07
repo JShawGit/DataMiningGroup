@@ -1,10 +1,11 @@
-library(DT)
-library(grid)
+library(shinydashboard)
+library(shinyWidgets)
+library(ggcorrplot)
+library(gridExtra)
 library(dplyr)
 library(shiny)
-library(gridExtra)
-library(shinyWidgets)
-library(shinydashboard)
+library(grid)
+library(DT)
 
 
 
@@ -305,63 +306,76 @@ Predict <- function(TREE, X) {
 
 # Get data ---------------------------------------------------------------------
 data = get_dataset()
-names(data)
+X = data[1:ncol(data)-1]
+Y = data["Class"]
+tree = DecisionTree(X, Y)
 # ==============================================================================
 
 
 
 # Define UI here ---------------------------------------------------------------
-ui <- fluidPage(
+ui <- fluidPage( 
+  
+  # FluidPage options
+  title="Diabetes Prediction Application",
+  style="background-color:#16161a;padding:20px;",
   
   # Page title
-  titlePanel("Diabetes Prediction", windowTitle="Diabetes Prediction"),
+  #titlePanel("Diabetes Prediction", windowTitle="Diabetes Prediction"),
   
   # First row has: Prediction and the Graph #
   fluidRow(
+    style = paste0("margin:10px;display:flex;flex-direction:row;"),
     
     # Prediction in/output (17 values in total normally)
     column(6,  align="center", 
-           style = "background-color:#dee0e3;padding:30px;display:flex;flex-direction:column;",
+          style = paste0("background-color:#45464d;color:white;font-size:12px;",
+                        "border-style:groove;border-radius:20px;",
+                        "margin:10px;display:flex;flex-direction:column;"),
+          
+      tags$b(h2("Diagnosis Prediction")),
            
       fluidRow(
+        style = paste0("margin:10px;display:flex;flex-direction:row;"),
+        
         column(3, align="left",
-         numericInput("Age", width=80, tags$b("Age"), value=40),
-         radioButtons("Alopecia", width=80, tags$b("Alopecia"), 
-                      choices=list("True"=1, "False"=0), selected=1),
-         radioButtons("Delayed.Healing", width=80, tags$b("Delayed Healing"), 
-                      choices=list("True"=1, "False"=0), selected=1),
-         radioButtons("Gender", width=80, tags$b("Gender"), 
-                      choices=list("Female"=1, "Male"=0), selected=0),
+          numericInput("Age", width=80, tags$b("Age"), value=40),
+          radioButtons("Genital.Thrush", tags$b("Genital Thrush"), 
+                       choices=list("True"=1, "False"=0), selected=0),
+          radioButtons("Obesity", tags$b("Obesity"),
+                       choices=list("True"=1, "False"=0), selected=1),
+          radioButtons("Polyuria", tags$b("Polyuria"), 
+                       choices=list("True"=1, "False"=0), selected=0),
         ),
         
         column(3, align="left",
-         radioButtons("Genital.Thrush", tags$b("Genital Thrush"), 
-                      choices=list("True"=1, "False"=0), selected=0),
-         radioButtons("Irritability", tags$b("Irritability"), 
-                      choices=list("True"=1, "False"=0), selected=0),
-         radioButtons("Itching", tags$b("Itching"), 
-                      choices=list("True"=1, "False"=0), selected=1),
+          radioButtons("Alopecia", width=80, tags$b("Alopecia"), 
+            choices=list("True"=1, "False"=0), selected=1),
+          radioButtons("Irritability", tags$b("Irritability"), 
+                       choices=list("True"=1, "False"=0), selected=0),
+          radioButtons("Partial.Paresis", tags$b("Partial Paresis"), 
+                       choices=list("True"=1, "False"=0), selected=0),
+          radioButtons("Sudden.Weight.Loss", tags$b("Sudden Weight Loss"), 
+                       choices=list("True"=1, "False"=0), selected=0),
+        ),
+        
+        column(3, align="left",
+          radioButtons("Delayed.Healing", width=80, tags$b("Delayed Healing"), 
+            choices=list("True"=1, "False"=0), selected=1),
+          radioButtons("Itching", tags$b("Itching"), 
+                       choices=list("True"=1, "False"=0), selected=1),
+          radioButtons("Polydipsia", tags$b("Polydipsia"), 
+                       choices=list("True"=1, "False"=0), selected=1),
+          radioButtons("Visual.Blurring", tags$b("Visual Blurring"), 
+                       choices=list("True"=1, "False"=0), selected=0),
+        ),
+        
+        column(3, align="left",
+         radioButtons("Gender", width=80, tags$b("Gender"),
+                      choices=list("Female"=1, "Male"=0), selected=0),
          radioButtons("Muscle.Stiffness", tags$b("Muscle Stiffness"), 
                       choices=list("True"=1, "False"=0), selected=1),
-        ),
-        
-        column(3, align="left",
-         radioButtons("Obesity", tags$b("Obesity"), 
-                      choices=list("True"=1, "False"=0), selected=1),
-         radioButtons("Partial.Paresis", tags$b("Partial Paresis"), 
-                      choices=list("True"=1, "False"=0), selected=0),
-         radioButtons("Polydipsia", tags$b("Polydipsia"), 
-                      choices=list("True"=1, "False"=0), selected=1),
          radioButtons("Polyphagia", tags$b("Polyphagia"), 
-                      choices=list("True"=1, "False"=0), selected=0),
-        ),
-        
-        column(3, align="left",
-         radioButtons("Polyuria", tags$b("Polyuria"), 
-                      choices=list("True"=1, "False"=0), selected=0),
-         radioButtons("Sudden.Weight.Loss", tags$b("Sudden Weight Loss"), 
-                      choices=list("True"=1, "False"=0), selected=0),
-         radioButtons("Visual.Blurring", tags$b("Visual Blurring"), 
                       choices=list("True"=1, "False"=0), selected=0),
          radioButtons("Weakness", tags$b("Weakness"), 
                       choices=list("True"=1, "False"=0), selected=1)
@@ -375,11 +389,13 @@ ui <- fluidPage(
     
     # The graph output
     column(6, align="center", 
-           style="padding:5px;display:flex;flex-direction:column;",
-           
+           style = paste0("background-color:white;color:black;font-size:12px;",
+                          'border-style:groove;border-radius:20px;',
+                          "margin:10px;display:flex;flex-direction:column;"),
+      tags$b(h2("Diagnosis Correlation")),
+      plotOutput("graph"),
       selectInput("X", label = tags$b("Graph correlator"), 
-                  choices = colnames(data)[-17]),
-      plotOutput("graph")
+                  choices = colnames(data)[-17])
     )
     
   ), # ------------------------------------ #
@@ -387,14 +403,24 @@ ui <- fluidPage(
   
   # Second row has: Data grid and Graph options #
   fluidRow(
+    style = paste0("margin:10px;display:flex;flex-direction:row;"),
       
       # The dataframe table
-      column(6,
+      column(6, align="center", 
+        style = paste0("background-color:#b5b6bd;color:black;",
+                      'border-style:groove;border-radius:20px;margin:10px;',
+                      "display:flex;flex-direction:column;"),
+        tags$b(h2("Available Data")),
         dataTableOutput("plot")
       ),
       
-      # The graph input
-      column(6,
+      # The correlation graph output
+      column(6, align="center", 
+        style = paste0("background-color:white;color:black;",
+                      'border-style:groove;border-radius:20px;padding:10px;',
+                      "margin:10px;display:flex;flex-direction:column;"),
+        tags$b(h2("Variable Relationships")),
+        plotOutput("corr")
       )
       
   ) # ------------------------------------ #
@@ -405,6 +431,7 @@ ui <- fluidPage(
 
 # Define server logic here -----------------------------------------------------
 server <- function(input, output) {
+  
   
   # The plot to draw
   output$graph <- renderPlot({
@@ -419,13 +446,27 @@ server <- function(input, output) {
     )
   })
   
-  # Add another graph, perhaps a correlation matrix?
+  
+  # Correlation matrix
+  output$corr <- renderPlot({
+    dt = data
+    colnames(data) <- c(names(data)[-17], "Diagnosis")
+    model.matrix(~0+., data=data) %>%
+      cor(use="pairwise.complete.obs") %>%
+      ggcorrplot(show.diag=FALSE, type="lower", lab=TRUE, lab_size=2)
+  })
+  
   
   # The dataframe to show
   output$plot <- DT::renderDataTable(
-    {data},
-    options=list(scrollX=TRUE, scrollY=TRUE, pageLength = 5)
+    {
+      dt = data
+      colnames(dt) <- c(names(data)[-17], "Diagnosis")
+      dt
+    },
+    options=list(scrollX=TRUE, scrollY=TRUE, pageLength = 8)
   )
+  
   
   # The prediction to show
   output$predict <- renderUI({
@@ -441,22 +482,24 @@ server <- function(input, output) {
     colnames(df) <- n
     res = Predict(tree, df)
     text = "Empty"
-    
+    color = "#000000"
     if (res == 0) {
-      text = "Diabetic prediction: <b>negative</b>"
+      text = "<p>Diabetic prediction: <b>NEGATIVE</b></p>"
+      color = "#6cd476"
     }
-    
     else {
-      text = "Diabetic prediction: <b>positive</b>"
+      text = "<p>Diabetic prediction: <b>POSITIVE</b></p>"
+      color = "#db7b70"
     }
-    
     HTML(paste0(
-      '<center style="background-color:gray;color:white;display:flex',
-      ';flex-direction:column;justify-content:center;',
-      'height:80px;width:700px;"',
+      '<center style="background-color:', color, ';color:white;display:flex;',
+      'flex-direction:column;justify-content:center;',
+      'border-style:groove;border-radius:50px;',
+      'height:50px;width:300px;"',
       '<i>', text, '</i>',
       '</center>'
     ))
+    
     
   })
   
